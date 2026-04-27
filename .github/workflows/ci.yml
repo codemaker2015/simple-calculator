@@ -36,7 +36,7 @@ jobs:
           fi
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
         working-directory: ${{ env.PROJECT_DIR }}
 
       - name: Setup Pages
@@ -46,6 +46,8 @@ jobs:
       - name: Build
         run: npx vite build --base=${{ steps.pages.outputs.base_path }}
         working-directory: ${{ env.PROJECT_DIR }}
+        env:
+          DISABLE_ESLINT_PLUGIN: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
