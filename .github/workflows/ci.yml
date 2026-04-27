@@ -1,0 +1,65 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Find project directory and install
+        run: |
+          # Locate the directory containing package.json (root or one level deep)
+          if [ -f package.json ]; then
+            echo "PROJECT_DIR=." >> $GITHUB_ENV
+          else
+            PKG=$(find . -maxdepth 2 -name package.json -not -path '*/node_modules/*' | head -1)
+            echo "PROJECT_DIR=$(dirname $PKG)" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Build
+        run: npx vite build --base=${{ steps.pages.outputs.base_path }}
+        working-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.PROJECT_DIR }}/dist/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
